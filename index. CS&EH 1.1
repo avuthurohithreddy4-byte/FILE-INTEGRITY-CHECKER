@@ -1,0 +1,97 @@
+import hashlib
+import time
+import os
+
+def calculate_file_hash_chunked(file_path, hash_algorithm='sha256', block_size=65536):
+    """
+    Calculates the hash of a file by reading it in chunks.
+    Handles large files without running out of memory.
+    """
+    if hash_algorithm.lower() == 'sha256':
+        hasher = hashlib.sha256()
+    elif hash_algorithm.lower() == 'md5':
+        hasher = hashlib.md5()
+    else:
+        raise ValueError(f"Unsupported hash algorithm: {hash_algorithm}. Use 'sha256' or 'md5'.")
+
+    try:
+        # Open the file in binary mode
+        with open(file_path, 'rb') as f:
+            while True:
+                # Read file in chunks
+                chunk = f.read(block_size)
+                if not chunk:
+                    break
+                hasher.update(chunk)
+        return hasher.hexdigest()
+    except FileNotFoundError:
+        return None # Return None if the file is not found
+    except Exception as e:
+        print(f"An error occurred while hashing the file: {e}")
+        return None
+
+def monitor_file_changes(file_path, interval_seconds=5):
+    """
+    Monitors a file for changes by comparing its hash value over time.
+    """
+    if not os.path.exists(file_path):
+        print(f"Error: File not found at '{file_path}'")
+        return
+
+    print(f"--- Starting file monitoring for: {file_path} ---")
+    print(f"Checking every {interval_seconds} seconds. Press Ctrl+C to stop.")
+
+    # Calculate initial hash
+    last_hash = calculate_file_hash_chunked(file_path)
+    if last_hash is None:
+        return
+
+    print(f"Initial Hash ({hashlib.sha256().name.upper()}): {last_hash}")
+
+    try:
+        while True:
+            time.sleep(interval_seconds)
+            current_hash = calculate_file_hash_chunked(file_path)
+
+            if current_hash is None:
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] File was deleted or became inaccessible!")
+                # To prevent constant 'File not found' messages, we wait for the file to reappear
+                while current_hash is None:
+                    time.sleep(interval_seconds)
+                    current_hash = calculate_file_hash_chunked(file_path)
+                print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] File reappeared. New Hash: {current_hash}")
+                last_hash = current_hash
+                continue
+
+            if current_hash != last_hash:
+                print(f"\n🚨 [{time.strftime('%Y-%m-%d %H:%M:%S')}] --- FILE CONTENT CHANGE DETECTED! ---")
+                print(f"   Old Hash: {last_hash}")
+                print(f"   New Hash: {current_hash}\n")
+                last_hash = current_hash
+            else:
+                # Optional: Uncomment the line below to show periodic checks
+                # print(f"[{time.strftime('%Y-%m-%d %H:%M:%S')}] File hash remains the same.")
+                pass
+
+    except KeyboardInterrupt:
+        print("\n--- Monitoring stopped by user. ---")
+
+# --- Usage Example ---
+
+# 1. Create a dummy file for testing (e.g., 'test_file.txt')
+# 2. Run the script and keep it running.
+# 3. Modify 'test_file.txt' (e.g., add a line, delete a character) and save it.
+# 4. Observe the output in the console.
+
+# Define the file to monitor
+FILE_TO_WATCH = 'test_file.txt'
+
+# Example setup: Create the file if it doesn't exist
+if not os.path.exists(FILE_TO_WATCH):
+    with open(FILE_TO_WATCH, 'w') as f:
+        f.write("This is the initial content.\n")
+    print(f"Created initial file: '{FILE_TO_WATCH}'")
+
+# Start the monitoring tool
+# You can change the interval (e.g., 2 seconds)
+monitor_file_changes(FILE_TO_WATCH, interval_seconds=2)
