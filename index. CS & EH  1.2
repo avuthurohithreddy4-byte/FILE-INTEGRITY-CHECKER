@@ -1,0 +1,67 @@
+import hashlib
+import sys
+from pathlib import Path
+
+def calculate_hash(file_path, algorithm='sha256'):
+    """
+    Calculate the hash of a file using the specified algorithm.
+    """
+    hash_func = hashlib.new(algorithm)
+
+    with open(file_path, 'rb') as file:
+        for chunk in iter(lambda: file.read(4096), b''):
+            hash_func.update(chunk)
+
+    return hash_func.hexdigest()
+
+
+def save_hash(file_path, hash_value):
+    """
+    Save the hash value to a .hash file.
+    """
+    hash_file = Path(file_path).with_suffix('.hash')
+    with open(hash_file, 'w') as f:
+        f.write(hash_value)
+
+
+def verify_file(file_path, expected_hash, algorithm='sha256'):
+    """
+    Verify file integrity by comparing hashes.
+    """
+    current_hash = calculate_hash(file_path, algorithm)
+    return current_hash == expected_hash, current_hash
+
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Usage:")
+        print("  Generate hash: python file_integrity_check.py <file> generate")
+        print("  Verify hash:   python file_integrity_check.py <file> verify <expected_hash>")
+        sys.exit(1)
+
+    file_path = sys.argv[1]
+    action = sys.argv[2]
+
+    if action == "generate":
+        hash_value = calculate_hash(file_path)
+        save_hash(file_path, hash_value)
+        print(f"File Hash (SHA-256): {hash_value}")
+        print("Hash saved successfully.")
+
+    elif action == "verify":
+        if len(sys.argv) != 4:
+            print("Please provide the expected hash value.")
+            sys.exit(1)
+
+        expected_hash = sys.argv[3]
+        valid, current_hash = verify_file(file_path, expected_hash)
+
+        if valid:
+            print("✔ File integrity verified. No changes detected.")
+        else:
+            print("✘ File integrity compromised!")
+            print(f"Current Hash: {current_hash}")
+            print(f"Expected Hash: {expected_hash}")
+
+    else:
+        print("Invalid action. Use 'generate' or 'verify'.")
