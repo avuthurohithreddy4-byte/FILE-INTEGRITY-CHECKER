@@ -26,3 +26,8 @@ The synergy between Cyber Security and Ethical Hacking is foundational to modern
 # OUTPUT OF THE CODE
 
 
+<img width="658" height="744" alt="Image" src="https://github.com/user-attachments/assets/c69b086c-da05-4b3f-9e6b-1c4c39c63e15" />
+
+<img width="541" height="856" alt="Image" src="https://github.com/user-attachments/assets/5096710b-aa13-4a88-9eef-1e2ec8aad152" />
+
+<img width="563" height="890" alt="Image" src="https://github.com/user-attachments/assets/8cb1f4ae-9423-4093-93c5-85d8091c9341" />
