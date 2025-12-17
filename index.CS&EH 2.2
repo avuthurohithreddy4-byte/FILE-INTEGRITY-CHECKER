@@ -1,0 +1,108 @@
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# Simple payloads
+SQL_PAYLOAD = "' OR '1'='1"
+XSS_PAYLOAD = "<script>alert('XSS')</script>"
+
+def get_forms(url):
+    """Extract all forms from a webpage"""
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    return soup.find_all("form")
+
+
+def get_form_details(form):
+    """Extract form action, method and inputs"""
+    details = {}
+    action = form.attrs.get("action", "")
+    method = form.attrs.get("method", "get").lower()
+
+    inputs = []
+    for input_tag in form.find_all("input"):
+        name = input_tag.attrs.get("name")
+        input_type = input_tag.attrs.get("type", "text")
+        inputs.append({"name": name, "type": input_type})
+
+    details["action"] = action
+    details["method"] = method
+    details["inputs"] = inputs
+    return details
+
+
+def test_sql_injection(url, form):
+    """Test form for SQL Injection"""
+    details = get_form_details(form)
+    data = {}
+
+    for input_tag in details["inputs"]:
+        if input_tag["type"] == "text" or input_tag["type"] == "password":
+            data[input_tag["name"]] = SQL_PAYLOAD
+
+    target_url = urljoin(url, details["action"])
+
+    if details["method"] == "post":
+        res = requests.post(target_url, data=data)
+    else:
+        res = requests.get(target_url, params=data)
+
+    if SQL_PAYLOAD in res.text:
+        return True
+    return False
+
+
+def test_xss(url, form):
+    """Test form for XSS"""
+    details = get_form_details(form)
+    data = {}
+
+    for input_tag in details["inputs"]:
+        if input_tag["type"] == "text":
+            data[input_tag["name"]] = XSS_PAYLOAD
+
+    target_url = urljoin(url, details["action"])
+
+    if details["method"] == "post":
+        res = requests.post(target_url, data=data)
+    else:
+        res = requests.get(target_url, params=data)
+
+    if XSS_PAYLOAD in res.text:
+        return True
+    return False
+
+
+def scan_website(url):
+    print("\n==================================================")
+    print("PYTHON WEB VULNERABILITY SCANNER")
+    print("(Using requests & BeautifulSoup)")
+    print("==================================================")
+
+    print(f"\n[INFO] Target URL : {url}")
+
+    forms = get_forms(url)
+    print(f"[INFO] Forms detected : {len(forms)}")
+
+    for i, form in enumerate(forms, start=1):
+        print(f"\n[INFO] Testing Form #{i}")
+
+        if test_sql_injection(url, form):
+            print("[ALERT] SQL Injection vulnerability detected!")
+        else:
+            print("[OK] SQL Injection test passed.")
+
+        if test_xss(url, form):
+            print("[ALERT] XSS vulnerability detected!")
+        else:
+            print("[OK] XSS test passed.")
+
+    print("\n-----------------------------------------------")
+    print("[INFO] Scan Completed Successfully")
+    print("-----------------------------------------------")
+
+
+# ----------- MAIN PROGRAM -----------
+if __name__ == "__main__":
+    target = input("Enter Target Website URL: ")
+    scan_website(target)
